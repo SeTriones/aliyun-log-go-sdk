@@ -72,7 +72,7 @@ func (c *Client) CreateProject(name, description string) (*LogProject, error) {
 
 	uri := "/"
 	proj := convert(c, name)
-	_, err = request(proj, "POST", uri, h, body)
+	_, _, err = request(proj, "POST", uri, h, body)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (c *Client) GetProject(name string) (*LogProject, error) {
 
 	uri := "/"
 	proj := convert(c, name)
-	_, err := request(proj, "GET", uri, h, nil)
+	_, _, err := request(proj, "GET", uri, h, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (c *Client) CheckProjectExist(name string) (bool, error) {
 	}
 	uri := "/"
 	proj := convert(c, name)
-	_, err := request(proj, "GET", uri, h, nil)
+	_, _, err := request(proj, "GET", uri, h, nil)
 	if err != nil {
 		if _, ok := err.(*Error); ok {
 			slsErr := err.(*Error)
@@ -125,7 +125,7 @@ func (c *Client) DeleteProject(name string) error {
 
 	proj := convert(c, name)
 	uri := "/"
-	_, err := request(proj, "DELETE", uri, h, nil)
+	_, _, err := request(proj, "DELETE", uri, h, nil)
 	if err != nil {
 		return err
 	}
