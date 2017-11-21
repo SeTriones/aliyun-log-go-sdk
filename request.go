@@ -15,11 +15,11 @@ import (
 
 // request sends a request to SLS.
 func request(project *LogProject, method, uri string, headers map[string]string,
-	body []byte) (*http.Response, error) {
+	body []byte) (*http.Response, []byte, error) {
 
 	// The caller should provide 'x-log-bodyrawsize' header
 	if _, ok := headers["x-log-bodyrawsize"]; !ok {
-		return nil, fmt.Errorf("Can't find 'x-log-bodyrawsize' header")
+		return nil, nil, fmt.Errorf("Can't find 'x-log-bodyrawsize' header")
 	}
 
 	// SLS public request headers
@@ -37,7 +37,7 @@ func request(project *LogProject, method, uri string, headers map[string]string,
 		bodyMD5 := fmt.Sprintf("%X", md5.Sum(body))
 		headers["Content-MD5"] = bodyMD5
 		if _, ok := headers["Content-Type"]; !ok {
-			return nil, fmt.Errorf("Can't find 'Content-Type' header")
+			return nil, nil, fmt.Errorf("Can't find 'Content-Type' header")
 		}
 	}
 
@@ -45,7 +45,7 @@ func request(project *LogProject, method, uri string, headers map[string]string,
 	// Authorization = "SLS <AccessKeyId>:<Signature>"
 	digest, err := signature(project, method, uri, headers)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	auth := fmt.Sprintf("SLS %v:%v", project.AccessKeyID, digest)
 	headers["Authorization"] = auth
@@ -55,7 +55,7 @@ func request(project *LogProject, method, uri string, headers map[string]string,
 	urlStr := fmt.Sprintf("https://%v.%v%v", project.Name, project.Endpoint, uri)
 	req, err := http.NewRequest(method, urlStr, reader)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for k, v := range headers {
 		req.Header.Add(k, v)
@@ -72,8 +72,9 @@ func request(project *LogProject, method, uri string, headers map[string]string,
 	// Get ready to do request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	defer resp.Body.Close()
 
 	// Parse the sls error from body.
 	if resp.StatusCode != http.StatusOK {
@@ -81,7 +82,7 @@ func request(project *LogProject, method, uri string, headers map[string]string,
 		buf, _ := ioutil.ReadAll(resp.Body)
 		json.Unmarshal(buf, err)
 		err.RequestID = resp.Header.Get("x-log-requestid")
-		return nil, err
+		return nil, nil, err
 	}
 
 	if glog.V(1) {
@@ -91,5 +92,9 @@ func request(project *LogProject, method, uri string, headers map[string]string,
 		}
 		glog.Infof("HTTP Response:\n%v", string(dump))
 	}
-	return resp, nil
+	raw, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+	return resp, raw, nil
 }
