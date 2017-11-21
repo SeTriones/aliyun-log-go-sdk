@@ -3,7 +3,6 @@ package sls
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -40,12 +39,11 @@ func (p *LogProject) ListLogStore() ([]string, error) {
 	}
 
 	uri := fmt.Sprintf("/logstores")
-	r, err := request(p, "GET", uri, h, nil)
+	r, buf, err := request(p, "GET", uri, h, nil)
 	if err != nil {
 		return nil, NewClientError(err.Error())
 	}
 
-	buf, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(buf, err)
@@ -68,12 +66,11 @@ func (p *LogProject) GetLogStore(name string) (*LogStore, error) {
 		"x-log-bodyrawsize": "0",
 	}
 
-	r, err := request(p, "GET", "/logstores/"+name, h, nil)
+	r, buf, err := request(p, "GET", "/logstores/"+name, h, nil)
 	if err != nil {
 		return nil, NewClientError(err.Error())
 	}
 
-	buf, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(buf, err)
@@ -113,12 +110,11 @@ func (p *LogProject) CreateLogStore(name string, ttl, shardCnt int) error {
 		"Accept-Encoding":   "deflate", // TODO: support lz4
 	}
 
-	r, err := request(p, "POST", "/logstores", h, body)
+	r, body, err := request(p, "POST", "/logstores", h, body)
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	body, _ = ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -133,12 +129,11 @@ func (p *LogProject) DeleteLogStore(name string) (err error) {
 		"x-log-bodyrawsize": "0",
 	}
 
-	r, err := request(p, "DELETE", "/logstores/"+name, h, nil)
+	r, body, err := request(p, "DELETE", "/logstores/"+name, h, nil)
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	body, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -170,12 +165,11 @@ func (p *LogProject) UpdateLogStore(name string, ttl, shardCnt int) (err error) 
 		"Content-Type":      "application/json",
 		"Accept-Encoding":   "deflate", // TODO: support lz4
 	}
-	r, err := request(p, "PUT", "/logstores/"+name, h, body)
+	r, body, err := request(p, "PUT", "/logstores/"+name, h, body)
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	body, _ = ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -194,12 +188,11 @@ func (p *LogProject) ListMachineGroup(offset, size int) (m []string, total int, 
 		size = 500
 	}
 	uri := fmt.Sprintf("/machinegroups?offset=%v&size=%v", offset, size)
-	r, err := request(p, "GET", uri, h, nil)
+	r, buf, err := request(p, "GET", uri, h, nil)
 	if err != nil {
 		return nil, 0, NewClientError(err.Error())
 	}
 
-	buf, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(buf, err)
@@ -223,7 +216,7 @@ func (p *LogProject) CheckLogstoreExist(name string) (bool, error) {
 	h := map[string]string{
 		"x-log-bodyrawsize": "0",
 	}
-	_, err := request(p, "GET", "/logstores/"+name, h, nil)
+	_, _, err := request(p, "GET", "/logstores/"+name, h, nil)
 	if err != nil {
 		if _, ok := err.(*Error); ok {
 			slsErr := err.(*Error)
@@ -242,7 +235,7 @@ func (p *LogProject) CheckMachineGroupExist(name string) (bool, error) {
 	h := map[string]string{
 		"x-log-bodyrawsize": "0",
 	}
-	_, err := request(p, "GET", "/machinegroups/"+name, h, nil)
+	_, _, err := request(p, "GET", "/machinegroups/"+name, h, nil)
 
 	if err != nil {
 		if _, ok := err.(*Error); ok {
@@ -262,12 +255,11 @@ func (p *LogProject) GetMachineGroup(name string) (m *MachineGroup, err error) {
 	h := map[string]string{
 		"x-log-bodyrawsize": "0",
 	}
-	resp, err := request(p, "GET", "/machinegroups/"+name, h, nil)
+	resp, buf, err := request(p, "GET", "/machinegroups/"+name, h, nil)
 	if err != nil {
 		return nil, NewClientError(err.Error())
 	}
 
-	buf, _ := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(buf, err)
@@ -292,12 +284,11 @@ func (p *LogProject) CreateMachineGroup(m *MachineGroup) error {
 		"Content-Type":      "application/json",
 		"Accept-Encoding":   "deflate", // TODO: support lz4
 	}
-	resp, err := request(p, "POST", "/machinegroups", h, body)
+	resp, body, err := request(p, "POST", "/machinegroups", h, body)
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	body, _ = ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -318,12 +309,11 @@ func (p *LogProject) UpdateMachineGroup(m *MachineGroup) (err error) {
 		"Content-Type":      "application/json",
 		"Accept-Encoding":   "deflate", // TODO: support lz4
 	}
-	r, err := request(p, "PUT", "/machinegroups/"+m.Name, h, body)
+	r, body, err := request(p, "PUT", "/machinegroups/"+m.Name, h, body)
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	body, _ = ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -337,12 +327,11 @@ func (p *LogProject) DeleteMachineGroup(name string) (err error) {
 	h := map[string]string{
 		"x-log-bodyrawsize": "0",
 	}
-	r, err := request(p, "DELETE", "/machinegroups/"+name, h, nil)
+	r, body, err := request(p, "DELETE", "/machinegroups/"+name, h, nil)
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	body, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -362,12 +351,11 @@ func (p *LogProject) ListConfig(offset, size int) (cfgNames []string, total int,
 		size = 100
 	}
 	uri := fmt.Sprintf("/configs?offset=%v&size=%v", offset, size)
-	r, err := request(p, "GET", uri, h, nil)
+	r, buf, err := request(p, "GET", uri, h, nil)
 	if err != nil {
 		return nil, 0, NewClientError(err.Error())
 	}
 
-	buf, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(buf, err)
@@ -390,7 +378,7 @@ func (p *LogProject) CheckConfigExist(name string) (bool, error) {
 	h := map[string]string{
 		"x-log-bodyrawsize": "0",
 	}
-	_, err := request(p, "GET", "/configs/"+name, h, nil)
+	_, _, err := request(p, "GET", "/configs/"+name, h, nil)
 	if err != nil {
 		if _, ok := err.(*Error); ok {
 			slsErr := err.(*Error)
@@ -409,12 +397,11 @@ func (p *LogProject) GetConfig(name string) (c *LogConfig, err error) {
 	h := map[string]string{
 		"x-log-bodyrawsize": "0",
 	}
-	r, err := request(p, "GET", "/configs/"+name, h, nil)
+	r, buf, err := request(p, "GET", "/configs/"+name, h, nil)
 	if err != nil {
 		return nil, NewClientError(err.Error())
 	}
 
-	buf, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(buf, err)
@@ -439,12 +426,11 @@ func (p *LogProject) UpdateConfig(c *LogConfig) (err error) {
 		"Content-Type":      "application/json",
 		"Accept-Encoding":   "deflate", // TODO: support lz4
 	}
-	r, err := request(p, "PUT", "/configs/"+c.Name, h, body)
+	r, body, err := request(p, "PUT", "/configs/"+c.Name, h, body)
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	body, _ = ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -465,12 +451,11 @@ func (p *LogProject) CreateConfig(c *LogConfig) (err error) {
 		"Content-Type":      "application/json",
 		"Accept-Encoding":   "deflate", // TODO: support lz4
 	}
-	r, err := request(p, "POST", "/configs", h, body)
+	r, body, err := request(p, "POST", "/configs", h, body)
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	body, err = ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -484,12 +469,11 @@ func (p *LogProject) DeleteConfig(name string) (err error) {
 	h := map[string]string{
 		"x-log-bodyrawsize": "0",
 	}
-	r, err := request(p, "DELETE", "/configs/"+name, h, nil)
+	r, body, err := request(p, "DELETE", "/configs/"+name, h, nil)
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	body, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -505,12 +489,11 @@ func (p *LogProject) GetAppliedMachineGroups(confName string) (groupNames []stri
 		"x-log-bodyrawsize": "0",
 	}
 	uri := fmt.Sprintf("/configs/%v/machinegroups", confName)
-	r, err := request(p, "GET", uri, h, nil)
+	r, buf, err := request(p, "GET", uri, h, nil)
 	if err != nil {
 		return nil, NewClientError(err.Error())
 	}
 
-	buf, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(buf, err)
@@ -533,12 +516,11 @@ func (p *LogProject) GetAppliedConfigs(groupName string) (confNames []string, er
 		"x-log-bodyrawsize": "0",
 	}
 	uri := fmt.Sprintf("/machinegroups/%v/configs", groupName)
-	r, err := request(p, "GET", uri, h, nil)
+	r, buf, err := request(p, "GET", uri, h, nil)
 	if err != nil {
 		return nil, NewClientError(err.Error())
 	}
 
-	buf, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(buf, err)
@@ -561,12 +543,11 @@ func (p *LogProject) ApplyConfigToMachineGroup(confName, groupName string) (err 
 		"x-log-bodyrawsize": "0",
 	}
 	uri := fmt.Sprintf("/machinegroups/%v/configs/%v", groupName, confName)
-	r, err := request(p, "PUT", uri, h, nil)
+	r, buf, err := request(p, "PUT", uri, h, nil)
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	buf, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(buf, err)
@@ -582,12 +563,11 @@ func (p *LogProject) RemoveConfigFromMachineGroup(confName, groupName string) (e
 		"x-log-bodyrawsize": "0",
 	}
 	uri := fmt.Sprintf("/machinegroups/%v/configs/%v", groupName, confName)
-	r, err := request(p, "DELETE", uri, h, nil)
+	r, buf, err := request(p, "DELETE", uri, h, nil)
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	buf, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(buf, err)
