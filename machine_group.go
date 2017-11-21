@@ -3,7 +3,6 @@ package sls
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 
@@ -51,12 +50,11 @@ func (m *MachineGroup) ListMachines() (ms []*Machine, total int, err error) {
 	}
 
 	uri := fmt.Sprintf("/machinegroups/%v/machines", m.Name)
-	r, err := request(m.project, "GET", uri, h, nil)
+	r, buf, err := request(m.project, "GET", uri, h, nil)
 	if err != nil {
 		return
 	}
 
-	buf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return
 	}
