@@ -3,7 +3,6 @@ package sls
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"strconv"
@@ -36,11 +35,10 @@ func (s *LogStore) ListShards() (shardIDs []int, err error) {
 		"x-log-bodyrawsize": "0",
 	}
 	uri := fmt.Sprintf("/logstores/%v/shards", s.Name)
-	r, err := request(s.project, "GET", uri, h, nil)
+	r, buf, err := request(s.project, "GET", uri, h, nil)
 	if err != nil {
 		return nil, NewClientError(err.Error())
 	}
-	buf, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := &Error{}
 		json.Unmarshal(buf, err)
@@ -82,12 +80,11 @@ func (s *LogStore) PutLogs(lg *LogGroup) (err error) {
 	}
 
 	uri := fmt.Sprintf("/logstores/%v", s.Name)
-	r, err := request(s.project, "POST", uri, h, out[:n])
+	r, body, err := request(s.project, "POST", uri, h, out[:n])
 	if err != nil {
 		return NewClientError(err.Error())
 	}
 
-	body, _ = ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -105,12 +102,7 @@ func (s *LogStore) GetCursor(shardID int, from string) (cursor string, err error
 	}
 	uri := fmt.Sprintf("/logstores/%v/shards/%v?type=cursor&from=%v",
 		s.Name, shardID, from)
-	r, err := request(s.project, "GET", uri, h, nil)
-	if err != nil {
-		return
-	}
-
-	buf, err := ioutil.ReadAll(r.Body)
+	r, buf, err := request(s.project, "GET", uri, h, nil)
 	if err != nil {
 		return
 	}
@@ -163,12 +155,7 @@ func (s *LogStore) GetLogsBytes(shardID int, cursor, endCursor string,
 			s.Name, shardID, cursor, endCursor, logGroupMaxCount)
 	}
 
-	r, err := request(s.project, "GET", uri, h, nil)
-	if err != nil {
-		return
-	}
-
-	buf, err := ioutil.ReadAll(r.Body)
+	r, buf, err := request(s.project, "GET", uri, h, nil)
 	if err != nil {
 		return
 	}
@@ -264,12 +251,11 @@ func (s *LogStore) GetHistograms(topic string, from int64, to int64, queryExp st
 
 	uri := fmt.Sprintf("/logstores/%v?type=histogram&topic=%v&from=%v&to=%v&query=%v", s.Name, topic, from, to, queryExp)
 
-	r, err := request(s.project, "GET", uri, h, nil)
+	r, body, err := request(s.project, "GET", uri, h, nil)
 	if err != nil {
 		return nil, NewClientError(err.Error())
 	}
 
-	body, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -287,9 +273,9 @@ func (s *LogStore) GetHistograms(topic string, from int64, to int64, queryExp st
 		return nil, err
 	}
 	getHistogramsResponse := GetHistogramsResponse{
-		Progress: r.Header[ProgressHeader][0],
-		Count:    count,
-		Histograms:     histograms,
+		Progress:   r.Header[ProgressHeader][0],
+		Count:      count,
+		Histograms: histograms,
 	}
 
 	return &getHistogramsResponse, nil
@@ -306,12 +292,11 @@ func (s *LogStore) GetLogs(topic string, from int64, to int64, queryExp string,
 
 	uri := fmt.Sprintf("/logstores/%v?type=log&topic=%v&from=%v&to=%v&query=%v&line=%v&offset=%v&reverse=%v", s.Name, topic, from, to, queryExp, maxLineNum, offset, reverse)
 
-	r, err := request(s.project, "GET", uri, h, nil)
+	r, body, err := request(s.project, "GET", uri, h, nil)
 	if err != nil {
 		return nil, NewClientError(err.Error())
 	}
 
-	body, _ := ioutil.ReadAll(r.Body)
 	if r.StatusCode != http.StatusOK {
 		err := new(Error)
 		json.Unmarshal(body, err)
@@ -352,7 +337,7 @@ func (s *LogStore) CreateIndex(index Index) error {
 	}
 
 	uri := fmt.Sprintf("/logstores/%s/index", s.Name)
-	_, err = request(s.project, "POST", uri, h, body)
+	_, _, err = request(s.project, "POST", uri, h, body)
 	return err
 }
 
@@ -370,7 +355,7 @@ func (s *LogStore) UpdateIndex(index Index) error {
 	}
 
 	uri := fmt.Sprintf("/logstores/%s/index", s.Name)
-	_, err = request(s.project, "PUT", uri, h, body)
+	_, _, err = request(s.project, "PUT", uri, h, body)
 	return err
 }
 
@@ -396,7 +381,7 @@ func (s *LogStore) DeleteIndex() error {
 	}
 
 	uri := fmt.Sprintf("/logstores/%s/index", s.Name)
-	_, err = request(s.project, "DELETE", uri, h, body)
+	_, _, err = request(s.project, "DELETE", uri, h, body)
 	return err
 }
 
@@ -421,12 +406,12 @@ func (s *LogStore) GetIndex() (*Index, error) {
 	}
 
 	uri := fmt.Sprintf("/logstores/%s/index", s.Name)
-	resp, err := request(s.project, "GET", uri, h, body)
+	_, data, err := request(s.project, "GET", uri, h, body)
 	if err != nil {
+		return nil, err
 	}
 
 	index := &Index{}
-	data, _ := ioutil.ReadAll(resp.Body)
 	err = json.Unmarshal(data, index)
 	if err != nil {
 		return nil, err
